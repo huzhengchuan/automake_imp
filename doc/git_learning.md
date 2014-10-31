@@ -2,7 +2,9 @@
 
 ###Git 基本概念 ###
 1. 工作目录 暂存区 本地仓库 远端仓库
-![Alt text](https://github.com/huzhengchuan/automake_imp/tree/master/image/No_1_Git_1.jpg "desc the struct in git")
+
+
+![Alt text](https://raw.githubusercontent.com/huzhengchuan/automake_imp/master/image/No_1_Git_1.jpg "The different content about workspace and so on.")
 
 
 ------
@@ -57,7 +59,8 @@ git config --global user.email  "zhengchuanhu@gmail.com"
 * 暂存区中添加文件
  1. add filename
  2. add dir 递归添加目录，以及目录中的文件
-
+* 删除工程中存在的文件<pre><code>git remove file #删除文件
+* git remove directory -rf #删除目录</code></pre>
 * 提交到本地仓库<pre><code>git commit -m "reconstruct the directory structure of the project."</code></pre>
  
 
@@ -89,3 +92,7 @@ Writing objects: 100% (7/7), 185.31 KiB | 0 bytes/s, done.
 Total 7 (delta 0), reused 0 (delta 0)
 To https://github.com/huzhengchuan/automake_imp.git
    d5b5913..e71b724  master -> master</code></pre>
+ 5. 给本地仓库添加远端仓库<pre><code>git remote add origin git@github.com:huzhengchuan/automake_imp.git  #给远端仓库添加一个站名 origin，可以有多个站点，添加完成之后将会在.git目录下的config文件中具有相关配置
+    git push origin master #将当前commit提交到origin站点的master branch分支 
+  </code></pre>
+ 
