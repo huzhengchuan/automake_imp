@@ -96,3 +96,9 @@ To https://github.com/huzhengchuan/automake_imp.git
     git push origin master #将当前commit提交到origin站点的master branch分支 
   </code></pre>
  
+###分支管理###
+1. 拉一个分支，修改合入新分支<pre><code>git branch ##列出本地库当前所有分支
+2. git branch -r #列出所有分支，包括本地分支和远端服务器分支
+3. git check -b branch_name  #拉一个分支，并将当前工作分支切换到该分支上
+4. git check branch_name #切换分支
+5. git branch -D  branch_name #删除分支，删除后，发生在该分支上所有变化无法恢复</code></pre>
