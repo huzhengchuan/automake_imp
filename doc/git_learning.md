@@ -98,7 +98,16 @@ To https://github.com/huzhengchuan/automake_imp.git
  
 ###分支管理###
 1. 拉一个分支，修改合入新分支<pre><code>git branch ##列出本地库当前所有分支
-2. git branch -r #列出所有分支，包括本地分支和远端服务器分支
-3. git check -b branch_name  #拉一个分支，并将当前工作分支切换到该分支上
-4. git check branch_name #切换分支
-5. git branch -D  branch_name #删除分支，删除后，发生在该分支上所有变化无法恢复</code></pre>
+git branch -r #列出所有分支，包括本地分支和远端服务器分支
+git check -b branch_name  #拉一个分支，并将当前工作分支切换到该分支上
+git check branch_name #切换分支
+git branch -D  branch_name #删除分支，删除后，发生在该分支上所有变化无法恢复
+git show-branch #查看当前分支的提交注释及信息
+git show-branch --all #查看所有分支的提交注释及信息，或者通过git log 查看分支的详细信息</code></pre>
+
+2. 如何查看分支信息<pre><code>$ git show-branch
+\* [automake_imp_new_feature_11_01] add the branch info about git.
+\add the description of learning
+--
+\*  [automake_imp_new_feature_11_01] add the branch info about git.
+\*+ [master] add the description of learning</code></pre>
