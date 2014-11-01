@@ -107,7 +107,18 @@ git show-branch --all #查看所有分支的提交注释及信息，或者通过
 
 2. 如何查看分支信息<pre><code>$ git show-branch
 \* [automake_imp_new_feature_11_01] add the branch info about git.
-\add the description of learning
---
+\! [master] add the description of learning 
+\--
 \*  [automake_imp_new_feature_11_01] add the branch info about git.
 \*+ [master] add the description of learning</code></pre>
+Notice:\“--”之上的两行表示有两个分支automake_imp_new_feature_11_01和master，且automake_imp_new_feature_11_01分支上最后一次提交的日志是“add the branch info about git.”，master分支上最后一次提交的日志是 “add the description of learning”。 “--”之下的几行表示了分支演化的历史，其中 automake_imp_new_feature_11_01表示发生在automake_imp_new_feature_11_01分支上的最后一次提交
+
+3. 分支合并<pre><code>git merge -m "注释" branch_dest branch_src #将branch_src合并到branch_dest项目中,如果有冲突会有提示信息
+git pull branch_dest branch_src ##将branch_src合并到branch_dest,如果有冲突，会有提示信息
+git merge -m "注释" branch_dest brach_src --no-ff</code></pre>
+Notice:在合并过程的提示“fast-farward merge（快速式合并）”是指直接将branch_src分支指向branch_dest分支。可通过“--no-ff“参数后，会执行正常合并，在master分支上生成一个新节点。为了保证版本演进的清晰，我们希望采用这种做法。
+
+4. 分支回退 git reset 
+
+
+###标签管理###
