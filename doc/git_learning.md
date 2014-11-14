@@ -119,6 +119,33 @@ git merge -m "注释" branch_dest brach_src --no-ff</code></pre>
 Notice:在合并过程的提示“fast-farward merge（快速式合并）”是指直接将branch_src分支指向branch_dest分支。可通过“--no-ff“参数后，会执行正常合并，在master分支上生成一个新节点。为了保证版本演进的清晰，我们希望采用这种做法。
 
 4. 分支回退 git reset 
-
+如果在git commit提交情况下，需要撤销commit提交。
+git reset –hard commit_id 即可撤销
+git reste参数详解： 
+根据–soft –mixed –hard，会对working tree和index和HEAD进行重置： 
+git reset –mixed：此为默认方式，不带任何参数的git reset，即时这种方式，它回退到某个版本，只保留源码，回退commit和index信息git reset –soft：回退到某个版本，只回退了commit的信息，不会恢复到index file一级。如果还要提交，直接commit即可 
+git reset –hard：彻底回退到某个版本，本地的源码也会变为上一个版本的内容
 
 ###标签管理###
+
+
+###git log常用命令 ###
+git log 
+<pre><code>$ git log --stat
+commit 987ae3bd0e9074830011bf883f842649fd4e95d6
+Merge: 852c7e2 c3f5c6a
+Author: PeterWang <zhengchuanhu@gmail.com>
+Date:   Sun Nov 2 00:44:26 2014 +0800
+merge to the master branch</code></pre>
+
+
+###git 回退机制
+1. git checkout -- <filename>  
+
+假如你操作失误（当然，这最好永远不要发生），你可以使用如下命令替换掉本地改动：此命令会使用 HEAD 中的最新内容替换掉你的工作目录中的文件。已添加到暂存区的改动以及新文件都不会受到影响。
+
+2. 假如你想丢弃你在本地的所有改动与提交，可以到服务器上获取最新的版本历史，并将你本地主分支指向它：
+<pre><code>
+git fetch origin
+git reset --hard origin/master
+</code></pre>
