@@ -9,4 +9,5 @@ main_lib:main.c
 task:lib main_lib
 	gcc -o task  oper_list.o main.o
 
-
+clean:
+	rm *.o  task 

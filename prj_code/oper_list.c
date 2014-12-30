@@ -5,6 +5,11 @@
 #include "oper_list.h"
 
 
+typedef struct _DLINK{
+	void * element;
+	struct _DLINK *pre;
+	struct _DLINK *next;
+}DLINK, *PDLINK;
 
 /*
 	init double-calc link list
@@ -37,7 +42,10 @@ int Clear_List(PDLINK pDLinkHead)
 	{
 		pNext = pCur->next;
 		pCur->pre->next = NULL;
+		free(pCur->element);
+		pCur->element = NULL;
 		free(pCur);
+		pCur = NULL;
 		pCur = pNext;
 	}
 	return 0;
@@ -92,7 +100,7 @@ PDLINK GetElem_List(PDLINK pDLinkHead, int index)
 	return: 0 -> ok
 			other -> failed
 */
-int AddElem_List(PDLINK pDLinkHead, NodeElem elem)
+int AddElem_List(PDLINK pDLinkHead, void * elem)
 {
 	int iRet = 0;
 	if(NULL == pDLinkHead)
@@ -197,9 +205,10 @@ int Print_List(PDLINK pDLinkHead)
 	printf("The link list is\r\n");
 	while(cur != pDLinkHead)
 	{
-		printf("%d\t", cur->element);
+		printf("%d\t", *(int *)cur->element);
 		cur = cur->next;
 	}
 	printf("\r\n");
 	return 0;
 }
+
