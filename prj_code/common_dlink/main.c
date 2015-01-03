@@ -8,17 +8,41 @@
 	解开耦合，使得函数独立通用行
 */
 
-static void fun(void *data)
+int fun_print(void *element, void *result)
 {
-	if(NULL == data)
+	if(NULL == element)
 	{
 		printf("error\t");
-		return ;
+		return 1;
 	}
-	printf("%d\t", *(int *)data);
-	return ;
+	printf("%d\t", *(int *)element);
+	return 0;
 }
 
+int fun_max(void *element, void *result)
+{
+	if(NULL == element |  NULL == result)
+	{
+		printf("error\t");
+		return 1;
+	}
+	if(*(int *)element  > *(int *)result)
+	{
+		*(int *)result = *(int *)element;
+	}
+	return 0;
+}
+
+int fun_sum(void *element, void *result)
+{
+	if(NULL == element |  NULL == result)
+	{
+		printf("error\t");
+		return 1;
+	}
+	*(long *)result += *(int *)element;
+	return 0;
+}
 int main()
 {
 	PDLINK pDLinkHead = NULL;
@@ -30,7 +54,11 @@ int main()
 		printf("%s\n", "Init list error");
 		return 1;
 	}
-	Print_List(pDLinkHead, fun);
+	
+	OperContext  contxt;
+	contxt.oper = fun_print;
+	contxt.result = NULL;
+	Oper_List(pDLinkHead, "print", (void *)&contxt);
 	int *a1 = (int *)malloc(sizeof(int));
 	int *a2 = (int *)malloc(sizeof(int));
 	int *a3 = (int *)malloc(sizeof(int));
@@ -41,28 +69,34 @@ int main()
 	AddElem_List(pDLinkHead, a3);
 	AddElem_List(pDLinkHead, a4);
 	
-	Print_List(pDLinkHead, fun);
+	Oper_List(pDLinkHead, "print", &contxt);
 
 	printf("the list length=%d\n", GetLength_List(pDLinkHead));
 	
+
+	contxt.oper = fun_max;
+	contxt.result =(void *)malloc(sizeof(int));
+	memset(contxt.result, 0x00, sizeof(int));
+	Oper_List(pDLinkHead, "max", &contxt);
+	printf("the max num=%d\r\n", *(int *)(contxt.result));
+	free(contxt.result);
+
+	contxt.oper = fun_sum;
+	contxt.result =(void *)malloc(sizeof(long));
+	memset(contxt.result, 0x00, sizeof(long));
+	Oper_List(pDLinkHead, "sum", &contxt);
+	printf("the sum num=%ld\r\n", *(long *)(contxt.result));
+	free(contxt.result);
+
 	DelNodeByIndex_List(pDLinkHead, 2);
-	Print_List(pDLinkHead, fun);
+	Oper_List(pDLinkHead, "print", &contxt);
 	
-//	DelNodeByIndex_List(pDLinkHead, 2);
-//	Print_List(pDLinkHead);
 
 	DelNodeByIndex_List(pDLinkHead, 1);
-	Print_List(pDLinkHead, fun);
+	Oper_List(pDLinkHead, "print", &contxt);
 
 	PDLINK cur_test = GetElem_List(pDLinkHead, 1);
-/*
-	if(NULL == cur_test)
-	{
-		printf("the index=1 is NULL\r\n");
-	}else{
-		printf("the index=1 is %d \r\n", *(int *)(cur_test->element));	
-	}
-*/	
+	
 	cur_test = GetElem_List(pDLinkHead, 0);
 	if(NULL == cur_test)
 	{

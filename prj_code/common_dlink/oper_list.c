@@ -11,6 +11,87 @@ typedef struct _DLINK{
 	struct _DLINK *next;
 }DLINK, *PDLINK;
 
+typedef struct _OperDLink{
+	const char *oper_name;
+	int  (*oper_action)(PDLINK pDLinkHead, void *context);
+}OperDLink;
+
+
+static int oper_sum(PDLINK pDLinkHead, void *context);
+static int oper_max(PDLINK pDLinkHead, void *context);
+static int oper_print(PDLINK pDLinkHead, void *context);
+
+
+OperDLink mOper[] = {
+	{"sum", oper_sum},
+	{"max", oper_max},
+	{"print", oper_print},
+};
+
+
+/*
+	print the double-calc link list
+	return: 0 -> ok
+			other -> failed
+*/
+static int oper_print(PDLINK pDLinkHead, void *context)
+{
+	if(NULL == pDLinkHead)
+	{
+		return 1;
+	}
+
+	printf("oper print begin\r\n");
+	PDLINK cur = pDLinkHead->next;
+
+	printf("The link list is\r\n");
+	while(cur != pDLinkHead)
+	{
+		(((OperContext *)context)->oper)(cur->element, ((OperContext *)context)->result);
+		cur = cur->next;
+	}
+	printf("\r\n");
+	printf("oper print end\r\n");
+	return 0;
+}
+static int oper_sum(PDLINK pDLinkHead, void *context)
+{
+	if(NULL == pDLinkHead)
+	{
+		return 1;
+	}
+
+	printf("oper sum begin\r\n");
+	PDLINK cur = pDLinkHead->next;
+
+	while(cur != pDLinkHead)
+	{
+		(((OperContext *)context)->oper)(cur->element, ((OperContext *)context)->result);
+		cur = cur->next;
+	}
+	printf("oper sum end\r\n");
+	return 0;
+}
+
+static int oper_max(PDLINK pDLinkHead, void *context)
+{
+	if(NULL == pDLinkHead)
+	{
+		return 1;
+	}
+
+	printf("oper max begin\r\n");
+	PDLINK cur = pDLinkHead->next;
+
+	while(cur != pDLinkHead)
+	{
+		(((OperContext *)context)->oper)(cur->element, ((OperContext *)context)->result);
+		cur = cur->next;
+	}
+	printf("oper max end\r\n");
+	return 0;
+}
+
 /*
 	init double-calc link list
 	return: int 0 ->ok
@@ -192,24 +273,16 @@ int DelNodeByElem_List(PDLINK pDLinkHead, PDLINK pDLinkNode)
 }
 
 
-/*
-	print the double-calc link list
-	return: 0 -> ok
-			other -> failed
-*/
-int Print_List(PDLINK pDLinkHead, PrintElemFun print)
+int Oper_List(PDLINK pDLinkHead, char * operName, void *context)
 {
-
-	PDLINK cur = pDLinkHead->next;
-
-	printf("The link list is\r\n");
-	while(cur != pDLinkHead)
+	int iLoop = 0;
+	int operLen = sizeof(mOper)/sizeof(OperDLink);
+	for(iLoop = 0; iLoop < operLen; iLoop++)
 	{
-		print(cur->element);
-//		printf("%d\t", *(int *)cur->element);
-		cur = cur->next;
+		if( 0 == strcmp(mOper[iLoop].oper_name, operName))
+		{
+				mOper[iLoop].oper_action(pDLinkHead, (void *)context);
+		}
 	}
-	printf("\r\n");
-	return 0;
 }
 

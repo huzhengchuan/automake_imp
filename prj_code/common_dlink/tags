@@ -1,0 +1,39 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+AddElem_List	oper_list.c	/^int AddElem_List(PDLINK pDLinkHead, void * elem)$/;"	f
+Clear_List	oper_list.c	/^int Clear_List(PDLINK pDLinkHead)$/;"	f
+DLINK	oper_list.c	/^}DLINK, *PDLINK;$/;"	t	typeref:struct:_DLINK	file:
+DLINK	oper_list.h	/^typedef struct _DLINK DLINK;$/;"	t	typeref:struct:_DLINK
+DelNodeByElem_List	oper_list.c	/^int DelNodeByElem_List(PDLINK pDLinkHead, PDLINK pDLinkNode)$/;"	f
+DelNodeByIndex_List	oper_list.c	/^int DelNodeByIndex_List(PDLINK pDLinkHead, int index)$/;"	f
+GetElem_List	oper_list.c	/^PDLINK GetElem_List(PDLINK pDLinkHead, int index)$/;"	f
+GetLength_List	oper_list.c	/^int GetLength_List(PDLINK pDLinkHead)$/;"	f
+Init_List	oper_list.c	/^int Init_List(PDLINK *pDLinkHead)$/;"	f
+MAX_SIZE	oper_list.h	9;"	d
+OperContext	oper_list.h	/^}OperContext;$/;"	t	typeref:struct:_OperContext
+OperDLink	oper_list.c	/^}OperDLink;$/;"	t	typeref:struct:_OperDLink	file:
+OperDLink	oper_list.h	/^typedef struct _OperDLink OperDLink;$/;"	t	typeref:struct:_OperDLink
+Oper_List	oper_list.c	/^int Oper_List(PDLINK pDLinkHead, char * operName, void *context)$/;"	f
+PDLINK	oper_list.c	/^}DLINK, *PDLINK;$/;"	t	typeref:struct:_DLINK	file:
+PDLINK	oper_list.h	/^typedef struct _DLINK *PDLINK;$/;"	t	typeref:struct:_DLINK
+PrintElemFun	oper_list.h	/^typedef void (*PrintElemFun)(void *data);  \/* 解耦合，使得链表成为一个通用的双向链表 *\/$/;"	t
+_DLINK	oper_list.c	/^typedef struct _DLINK{$/;"	s	file:
+_OperContext	oper_list.h	/^typedef struct _OperContext{$/;"	s
+_OperDLink	oper_list.c	/^typedef struct _OperDLink{$/;"	s	file:
+element	oper_list.c	/^	void * element;$/;"	m	struct:_DLINK	file:
+fun	main.c	/^void fun(void *element, void *result)$/;"	f
+mOper	oper_list.c	/^OperDLink mOper[] = {$/;"	v
+main	main.c	/^int main()$/;"	f
+next	oper_list.c	/^	struct _DLINK *next;$/;"	m	struct:_DLINK	typeref:struct:_DLINK::_DLINK	file:
+oper	oper_list.h	/^	int (*oper)(void *elem, void *result);$/;"	m	struct:_OperContext
+oper_action	oper_list.c	/^	int  (*oper_action)(PDLINK pDLinkHead, void *context);$/;"	m	struct:_OperDLink	file:
+oper_max	oper_list.c	/^static int oper_max(PDLINK pDLinkHead, void *context)$/;"	f	file:
+oper_name	oper_list.c	/^	const char *oper_name;$/;"	m	struct:_OperDLink	file:
+oper_print	oper_list.c	/^static int oper_print(PDLINK pDLinkHead, void *context)$/;"	f	file:
+oper_sum	oper_list.c	/^static int oper_sum(PDLINK pDLinkHead, void *context)$/;"	f	file:
+pre	oper_list.c	/^	struct _DLINK *pre;$/;"	m	struct:_DLINK	typeref:struct:_DLINK::_DLINK	file:
+result	oper_list.h	/^	void *result;$/;"	m	struct:_OperContext
