@@ -197,7 +197,7 @@ int DelNodeByElem_List(PDLINK pDLinkHead, PDLINK pDLinkNode)
 	return: 0 -> ok
 			other -> failed
 */
-int Print_List(PDLINK pDLinkHead)
+int Print_List(PDLINK pDLinkHead, PrintElemFun print)
 {
 
 	PDLINK cur = pDLinkHead->next;
@@ -205,7 +205,8 @@ int Print_List(PDLINK pDLinkHead)
 	printf("The link list is\r\n");
 	while(cur != pDLinkHead)
 	{
-		printf("%d\t", *(int *)cur->element);
+		print(cur->element);
+//		printf("%d\t", *(int *)cur->element);
 		cur = cur->next;
 	}
 	printf("\r\n");

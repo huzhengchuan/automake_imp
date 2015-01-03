@@ -1,5 +1,3 @@
-#include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
 
 #include "oper_list.h"
@@ -7,7 +5,20 @@
 
 /*
 	verify the double-calc link list
+	解开耦合，使得函数独立通用行
 */
+
+static void fun(void *data)
+{
+	if(NULL == data)
+	{
+		printf("error\t");
+		return ;
+	}
+	printf("%d\t", *(int *)data);
+	return ;
+}
+
 int main()
 {
 	PDLINK pDLinkHead = NULL;
@@ -19,8 +30,7 @@ int main()
 		printf("%s\n", "Init list error");
 		return 1;
 	}
-	
-	Print_List(pDLinkHead);
+	Print_List(pDLinkHead, fun);
 	int *a1 = (int *)malloc(sizeof(int));
 	int *a2 = (int *)malloc(sizeof(int));
 	int *a3 = (int *)malloc(sizeof(int));
@@ -31,18 +41,18 @@ int main()
 	AddElem_List(pDLinkHead, a3);
 	AddElem_List(pDLinkHead, a4);
 	
-	Print_List(pDLinkHead);
+	Print_List(pDLinkHead, fun);
 
 	printf("the list length=%d\n", GetLength_List(pDLinkHead));
 	
 	DelNodeByIndex_List(pDLinkHead, 2);
-	Print_List(pDLinkHead);
+	Print_List(pDLinkHead, fun);
 	
 //	DelNodeByIndex_List(pDLinkHead, 2);
 //	Print_List(pDLinkHead);
 
 	DelNodeByIndex_List(pDLinkHead, 1);
-	Print_List(pDLinkHead);
+	Print_List(pDLinkHead, fun);
 
 	PDLINK cur_test = GetElem_List(pDLinkHead, 1);
 /*
