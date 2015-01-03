@@ -58,7 +58,7 @@ int main()
 	OperContext  contxt;
 	contxt.oper = fun_print;
 	contxt.result = NULL;
-	Oper_List(pDLinkHead, "print", (void *)&contxt);
+	Oper_List(pDLinkHead, &contxt);
 	int *a1 = (int *)malloc(sizeof(int));
 	int *a2 = (int *)malloc(sizeof(int));
 	int *a3 = (int *)malloc(sizeof(int));
@@ -69,7 +69,7 @@ int main()
 	AddElem_List(pDLinkHead, a3);
 	AddElem_List(pDLinkHead, a4);
 	
-	Oper_List(pDLinkHead, "print", &contxt);
+	Oper_List(pDLinkHead, &contxt);
 
 	printf("the list length=%d\n", GetLength_List(pDLinkHead));
 	
@@ -77,23 +77,23 @@ int main()
 	contxt.oper = fun_max;
 	contxt.result =(void *)malloc(sizeof(int));
 	memset(contxt.result, 0x00, sizeof(int));
-	Oper_List(pDLinkHead, "max", &contxt);
+	Oper_List(pDLinkHead, &contxt);
 	printf("the max num=%d\r\n", *(int *)(contxt.result));
 	free(contxt.result);
 
 	contxt.oper = fun_sum;
 	contxt.result =(void *)malloc(sizeof(long));
 	memset(contxt.result, 0x00, sizeof(long));
-	Oper_List(pDLinkHead, "sum", &contxt);
+	Oper_List(pDLinkHead, &contxt);
 	printf("the sum num=%ld\r\n", *(long *)(contxt.result));
 	free(contxt.result);
 
 	DelNodeByIndex_List(pDLinkHead, 2);
-	Oper_List(pDLinkHead, "print", &contxt);
+	Oper_List(pDLinkHead, &contxt);
 	
 
 	DelNodeByIndex_List(pDLinkHead, 1);
-	Oper_List(pDLinkHead, "print", &contxt);
+	Oper_List(pDLinkHead, &contxt);
 
 	PDLINK cur_test = GetElem_List(pDLinkHead, 1);
 	
