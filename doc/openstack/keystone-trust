@@ -1,0 +1,113 @@
+Keystone Trusts
+Use Cases ---用户使用场景
+
+    HEAT and failover. It needs to move a virtual machine from one host to another.
+    Content production. Something generates a large file and needs to store it in swift.
+
+In both cases, the users authorizes it at setup time to perform this action any time in the future, long after the token is expired.
+Rules
+
+"Keystone is the Delegation（委派） Service that handles all the delegations for users. It is trusted to ensure that
+
+    a delegator（委托者） cannot delegate an attribute he has not already been assigned
+    a delegator cannot delegate once the delegation depth has been consumed
+    a delegator cannot delegate outside the validity period of his own delegation.
+
+In other words, a delegator can only delegate less than (or equal to) what he already has, and not more than it.
+Current Status of Delegation
+
+Right now, a user delegates in a short term fashion using tokens. Once a token has been granted to a user, he hands that off to another (service) user in order to prove his identity and authorization to perform some set of actions. In addition, since tokens are not scoped to a specific endpoint, they are currently passed on from one endpoint to another. This is not a secure approach. If any endpoint along the way is compromised, all the tokens in that endpoint are usable against any other service that accepts tokens. So we limit the scope of tokens to only that single endpoint, and we remove the attack. As a result, we also remove the ability of the remote service user to request additional operations from additional remote services on behalf of the original user. This is a problem that the trusts are designed to serve.
+Rules
+
+    A trust is a promise to allow delegation at some point in the future. The actual delegation is performed in the token. The trust is used to get the token.
+    The data for the delegation itself is simply the uuid user_ids for the trustor and trustee, along with the privileges that are being delegated.
+    The delegated privileges are a combination of a tenant id and a number of roles that must be a subset of the roles assigned to the trustor.
+        If all privileges are missing, then nothing is being delegated (ie. there is not a way of saying "delegate everything").
+    A final parameter, delegation depth, says whether the delegation is recursive or not, and if recursive specifies the length of the delegation chain.
+        A value of 0 (or missing) means that the delegate cannot delegate these permissions further.
+        A value of 1 means that the delegate can delegate the permissions to any set of delegates but the latter cannot delegate further.
+        A value of 2 means the delegation chain can be extended by a further length of 2 (ie. delegator to delegate to subdelegate to subsubdelegate).
+        A value of 'inf' means that the delegation is infinitely recursive.
+    There is also a list of endpoints associated with the delegation.
+        This further restricts the delegation to the specified endpoints only.
+        If the endpoints are missing, then the delegation is useless.
+        A special value of 'all_endpoints' allows the trust to be used by all endpoints associated with the delegated tenant.
+    There is an optional value for duration, which comprises the start time and end time for the trust.
+
+APIs
+To create a trust
+
+POST /trusts
+
+When POSTing to trusts, the trustor supplies
+
+    trustee: a user ID
+    tenantId:
+    roles
+    endpoints
+    trust start time (optional, defaults to submission time)
+    trust end time (optional, defaults to never)
+    delegation depth (optional)
+
+The trustor ID is implied from the creating users ID.
+To enumerated the trusts
+
+GET /trusts/
+
+This will return a document with two lists:
+
+    The first is the list of trusts for which the user is the trustor(委托者)
+    The second is a list of trusts for which the user is the trustee（受托者）
+
+To enumerate the list of trustees for trusts that the user has created:
+
+GET /user/<id>/trustees
+
+    Which will return a list of trustee user ids, each of which is associated with a list of URLS for the associated trusts.
+    This will view active trusts. disabled trusts will require an additional paramater (disabled)
+    Only the trustor will be able to access this URL. Any other user will get a 403 (Forbidden).
+
+To enumerate the set of trustors that have nominated the user as the trustee:
+
+GET /user/<id>/trustors
+
+    Which will return a list of trustor user ids, each of which is associated with a list of URLS for the associated trusts.
+    This will view active trusts. disabled trusts will require an additional paramater (disabled)
+    Only the trustor will be able to access this URL. Any other user will get a 403 (Forbidden)
+
+To view a trust
+
+    GET /trusts/{trustID}
+    This will view active trusts. disabled trusts will require an additional paramater (disabled)
+    Only the trustor or trustee will be able to access this URL. Any other user will get a 403 (Forbidden).
+
+To deactivate a trust
+
+    DELETE /trusts/{trustID}
+    This sets the trust status to disabled.
+    Only the trustor will be able to access this URL. Any other user will get a 403 (Forbidden).
+
+TrustID
+
+The trust id is a blob, and for the first implementation, will be a UUID. It should be useless to anyone but the trustor and the trustee. No other user should be able to view it. The user should be able to enumerate her preauthentications, in order to view, modify, and delete them. /users/preauthentications
+Implementation
+
+Implemented in two phases.
+Token Format Changes
+
+Each token created from a Trust will have two additional fields.
+
+    trustee field with the userID of the trustee
+    trust field with the trust ID.
+
+When performing recursive delegation, there needs to be a record of the delegation chain, not least so that the trustor can understand how the new trustee has been added to the token. Thus, each token will have a trusts field. This will be a list with the name of each trustee in the chain, ordered from the original trustee to the trustee that requested the token.
+
+Phase 1
+
+    Trusts get implemented today "hard wired" with the attributes that are currently exposed in a token: (trustor) user, tenant, roles, endpoints.
+    Tokens that get generated from the trusts will look just like normal tokens. They will have an additional field "trustee". This will allow the current consumers of tokens to continue to use a trust token just like they do now.
+
+Phase 2.
+
+    Modify the token architecture to allow arbitrary sets of attributes.
+    Modify the trust architecture to specify arbitrary sets of attributes to be used in a token.
