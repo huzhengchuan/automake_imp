@@ -1,1 +1,28 @@
 
+Similar to the way that the Internet uses the Domain Name System (DNS) to have a unique set of names refer to all the host computers in the world, Docker set out to make a namespace to allow a unique way to name every container image in the world. In that vision, a docker run someimage would result in the exact same someimage being pulled to the local system and run, no matter where your location or what type of Linux system you run it on.
+像网络上使用DNS系统是的世界上每个主机都有一个唯一的名称，Docker开始使用名称空间来作为唯一的方式来表示世界上每一个容器镜像。那样，一个docker运行某个镜像的时候将会导致相同的镜像被拉取到本地之后运行，而不会考虑你的位置或者是你运行的虚拟机的类型。
+For some potential Docker users, this presents problems. Some Docker installations are disconnected from the Internet. Security requirements of others allow them to search and pull images only from registries that they own themselves. These issues would prevent a pure Docker system from being installed in their environments.
+对于许多潜在的Docker使用者，这样出现一个问题。某个Docker被安装在连接不上网络的地方。或者其他因为涉及到安全上的导致检索或者拉取镜像的时候只能采用自己搭建的仓库。这些存在的问题将会阻止Docker运行在这样的环境上。
+There has been pressure to change some aspects of how the Docker image namespace works, so you can expect that story to evolve over time. As things stand today, however, you should know that a system running Docker purely from the upstream Docker Project code has the following attributes:
+这里已经有很多改变变化在怎么样Docker的镜像namespace运用起来。所以你可以认为这些随着时间都会被解决。然而，当前的话，我们应该知道如何去运行一个Docker集群使用上游的Docker项目。
+Search: An unpatched Docker system today only searches the Docker Hub Registry when you run a docker search command. 
+搜索：一个没有打patch的Docker系统当前只支持检索Docker Hub 镜像仓库，
+Blocking registries: Docker does not have a feature to block the Docker Hub Registry. So pulling an image without identifying a specific registry causes Docker to search for that image on the Docker Hub Registry (if it’s not already on the local system). 
+阻止注册: Docker 没有功能使得能够阻止Docker Hub的仓库。所以你pull一个镜像，如果没有给出指定的仓库地址，那么将会在Docker build中检索。
+Changing the default registry: Docker doesn’t have a feature for changing your default registry to anything other than the Docker Hub Registry.
+ 
+Push confirmation: Docker does not ask you to confirm a push request before it begins pushing an image. 
+
+Changes to some of these features are being discussed in the Docker community. Patches to change how some of these features work are included in Red Hat Enterprise Linux, Fedora, Atomic project, and related Linux distributions. For example, the current version of the docker package in RHEL Atomic (docker-1.8) includes some of those features just mentioned.
+For example, here are some settings from the /etc/sysconfig/docker file on an RHEL Atomic system that represent features that have not yet been added to the upstream Docker Project:
+ADD_REGISTRY='--add-registry registry.access.redhat.com'
+# BLOCK_REGISTRY='--block-registry'
+# INSECURE_REGISTRY='--insecure-registry'
+The ADD_REGISTRY variable lets you add a registry to use for docker search and docker pull commands. For users of Red Hat distributions, this puts Red Hat’s own registry (registry.access.redhat.com) before the Docker Hub Registry, so the user can know he is searching and pulling from that registry first. A user could also replace that registry with his own registries or simply add his own registry in front of Red Hat’s registry.
+Using the ADD_REGISTRY variable to this file puts any registry you add at the front of the list searched. However, if a requested image is not found in any of the registries you add, the Docker Hub Registry still is searched next. To change that behavior, you need to use the BLOCK_REGISTRY variable.
+By setting the BLOCK_REGISTRY variable, you can block access to any registry you choose. Of course, at the moment only the Docker Hub Registry is searched by default. So, to block the Docker Hub Registry from search and pull requests, you could use the following line:
+ BLOCK_REGISTRY='--block-registry docker.io'
+With that set, any requests for images that could not be found in registries set with ADD_REGISTRY variables would fail to be found, even if they existed at the Docker Hub Registry. In this way, only registries that you specifically included are searched for images by the users of this particular docker installation.
+The INSECURE_REGISTRY=‘--insecure-registry’ variable does not explicitly allow or disallow a registry. This is a specific case where someone wants to use the local Docker client to pull an image from a registry that provides HTTPS communication, but the client doesn’t have a certificate from that registry to verify its authenticity. Uncommenting the variable and adding the name of the insecure registry to that line allows the docker command to pull from that registry without full authorization. For example:
+INSECURE_REGISTRY='--insecure-registry myreg.example.com'
+Again, this and other features just described are not part of the upstream Docker Project. But if you need these features for your installation, you can change how access to registries works by default in Docker using these features that are currently in Fedora, RHEL, CentOS, and related Atomic project systems.
