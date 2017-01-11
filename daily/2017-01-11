@@ -1,0 +1,8 @@
+1. 调试image-upload功能
+2. 验证k8s创建应用
+3. cherry pick 支持裸机部署k8s以及driver机制的代码
+4. 分析jenkins/harbor以及keystone权限控制
+待完成
+1. 提交image-upload代码，确定大文件上传前端报错的问题
+2. 输出权限控制文档
+3. 分析harbor高可用配置的问题
