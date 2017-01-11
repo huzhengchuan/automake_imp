@@ -8,3 +8,6 @@
 3. 分析harbor高可用配置的问题
 4. 裸机部署k8s验证
 5. k8s代码以及harbor代码走读
+6. 需要处理的PR
+https://github.com/docker/docker-py/pull/1355
+https://github.com/vmware/harbor/issues/1293
