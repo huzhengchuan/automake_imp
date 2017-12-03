@@ -1,0 +1,329 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Kubernetes 集群环境搭建 &mdash; k8s 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="k8s 1.0 documentation" href="../index.html" />
+    <link rel="up" title="Kubernets Notes" href="index.html" />
+    <link rel="next" title="Kubernetes dashboard 搭建" href="kubernetes-dashboard.html" />
+    <link rel="prev" title="Kubernets Notes" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="kubernetes-dashboard.html" title="Kubernetes dashboard 搭建"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Kubernets Notes"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">k8s 1.0 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Kubernets Notes</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="kubernetes">
+<span id="kubernetes-cluster-environment"></span><h1>Kubernetes 集群环境搭建<a class="headerlink" href="#kubernetes" title="Permalink to this headline">¶</a></h1>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<ol class="last arabic simple">
+<li>以下所以shell命令都是在root用户下执行</li>
+</ol>
+</div>
+<div class="section" id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Permalink to this headline">¶</a></h2>
+<table border="1" class="docutils">
+<colgroup>
+<col width="50%" />
+<col width="50%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>OperationSystem</td>
+<td>Fedora atomic 26</td>
+</tr>
+<tr class="row-even"><td>Kubernetes</td>
+<td><tt class="docutils literal"><span class="pre">v1.6.7</span></tt></td>
+</tr>
+<tr class="row-odd"><td>docker</td>
+<td><tt class="docutils literal"><span class="pre">1.13.1</span></tt></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="id1">
+<h2>搭建具体步骤<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="id2">
+<h3>所有节点<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic">
+<li><p class="first">在每个节点上修改hosts配置，<tt class="docutils literal"><span class="pre">vim</span> <span class="pre">/etc/hosts</span></tt>:</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="go">127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4</span>
+<span class="go">::1         localhost localhost.localdomain localhost6 localhost6.localdomain6</span>
+<span class="go">10.20.0.100 master</span>
+<span class="go">10.20.0.101 node</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">修改高版本docker iptables规则</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="go">iptables -P FORWARD ACCEPT</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">修改``/etc/kubernetes/config``:</p>
+<div class="highlight-ini"><div class="highlight"><pre><span></span><span class="c1"># logging to stderr means we get it in the systemd journal</span>
+<span class="na">KUBE_LOGTOSTDERR</span><span class="o">=</span><span class="s">&quot;--logtostderr=true&quot;</span>
+
+<span class="c1"># journal message level, 0 is debug</span>
+<span class="na">KUBE_LOG_LEVEL</span><span class="o">=</span><span class="s">&quot;--v=0&quot;</span>
+
+<span class="c1"># Should this cluster be allowed to run privileged docker containers</span>
+<span class="na">KUBE_ALLOW_PRIV</span><span class="o">=</span><span class="s">&quot;--allow-privileged=false&quot;</span>
+
+<span class="c1"># How the controller-manager, scheduler, and proxy find the apiserver</span>
+<span class="na">KUBE_MASTER</span><span class="o">=</span><span class="s">&quot;--master=http://master:8080&quot;</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">禁用SELinux，iptables和firewalld</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="go">setenforce 0</span>
+<span class="go">systemctl disable iptables-services firewalld</span>
+<span class="go">systemctl stop iptables-services firewalld</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Configure flannel to overlay Docker network in <tt class="docutils literal"><span class="pre">/etc/sysconfig/flanneld</span></tt></p>
+<div class="highlight-ini"><div class="highlight"><pre><span></span><span class="c1"># Flanneld configuration options</span>
+
+<span class="c1"># etcd url location.  Point this to the server where etcd runs</span>
+<span class="na">FLANNEL_ETCD_ENDPOINTS</span><span class="o">=</span><span class="s">&quot;http://master:2379&quot;</span>
+
+<span class="c1"># etcd config key.  This is the configuration key that flannel queries</span>
+<span class="c1"># For address range assignment</span>
+<span class="na">FLANNEL_ETCD_PREFIX</span><span class="o">=</span><span class="s">&quot;/atomic.io/network&quot;</span>
+
+<span class="c1"># Any additional options that you want to pass</span>
+<span class="c1">#FLANNEL_OPTIONS=&quot;&quot;</span>
+</pre></div>
+</div>
+</li>
+</ol>
+</div>
+<div class="section" id="master">
+<h3>master节点<a class="headerlink" href="#master" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic">
+<li><p class="first">编辑``/etc/etcd/etcd.conf``文件:</p>
+<div class="highlight-ini"><div class="highlight"><pre><span></span><span class="na">ETCD_NAME</span><span class="o">=</span><span class="s">default</span>
+<span class="na">ETCD_DATA_DIR</span><span class="o">=</span><span class="s">&quot;/var/lib/etcd/default.etcd&quot;</span>
+<span class="na">ETCD_LISTEN_CLIENT_URLS</span><span class="o">=</span><span class="s">&quot;http://0.0.0.0:2379&quot;</span>
+<span class="na">ETCD_ADVERTISE_CLIENT_URLS</span><span class="o">=</span><span class="s">&quot;http://0.0.0.0:2379&quot;</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">编辑``/etc/kubernetes/apiserver``文件:</p>
+<div class="highlight-ini"><div class="highlight"><pre><span></span><span class="c1"># The address on the local server to listen to.</span>
+<span class="na">KUBE_API_ADDRESS</span><span class="o">=</span><span class="s">&quot;--address=0.0.0.0&quot;</span>
+
+<span class="c1"># The port on the local server to listen on.</span>
+<span class="na">KUBE_API_PORT</span><span class="o">=</span><span class="s">&quot;--port=8080&quot;</span>
+
+<span class="c1"># Port minions listen on</span>
+<span class="na">KUBELET_PORT</span><span class="o">=</span><span class="s">&quot;--kubelet-port=10250&quot;</span>
+
+<span class="c1"># Comma separated list of nodes in the etcd cluster</span>
+<span class="na">KUBE_ETCD_SERVERS</span><span class="o">=</span><span class="s">&quot;--etcd-servers=http://master:2379&quot;</span>
+
+<span class="c1"># Address range to use for services</span>
+<span class="na">KUBE_SERVICE_ADDRESSES</span><span class="o">=</span><span class="s">&quot;--service-cluster-ip-range=10.254.0.0/16&quot;</span>
+
+<span class="c1"># default admission control policies</span>
+<span class="c1"># KUBE_ADMISSION_CONTROL=&quot;--admission-control=NamespaceLifecycle,LimitRanger,SecurityContextDeny,ServiceAccount,ResourceQuota&quot;</span>
+
+<span class="c1"># Add your own!</span>
+<span class="na">KUBE_API_ARGS</span><span class="o">=</span><span class="s">&quot;&quot;</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Start ETCD and configure it to hold the network overlay configuration on master</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">This network must be unused in your network infrastructure! 172.30.0.0/16 is free in our network.</p>
+</div>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="go">systemctl start etcd</span>
+<span class="go">etcdctl mkdir /atomic.io/network</span>
+<span class="go">etcdctl mk /atomic.io/network/config &quot;{ \&quot;Network\&quot;: \&quot;172.30.0.0/16\&quot;, \&quot;SubnetLen\&quot;: 24, \&quot;Backend\&quot;: { \&quot;Type\&quot;: \&quot;vxlan\&quot; } }&quot;</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">start services</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="go">for SERVICES in etcd kube-apiserver kube-controller-manager kube-scheduler flanneld; do</span>
+<span class="go">    systemctl restart $SERVICES</span>
+<span class="go">    systemctl enable $SERVICES</span>
+<span class="go">    systemctl status $SERVICES</span>
+<span class="go">done</span>
+</pre></div>
+</div>
+</li>
+</ol>
+</div>
+<div class="section" id="node">
+<h3>node节点<a class="headerlink" href="#node" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic">
+<li><p class="first">配置``/etc/kubernetes/kubelet``文件:</p>
+<div class="highlight-ini"><div class="highlight"><pre><span></span><span class="c1">###</span>
+<span class="c1"># kubernetes kubelet (minion) config</span>
+
+<span class="c1"># The address for the info server to serve on (set to 0.0.0.0 or &quot;&quot; for all interfaces)</span>
+<span class="na">KUBELET_ADDRESS</span><span class="o">=</span><span class="s">&quot;--address=0.0.0.0&quot;</span>
+
+<span class="c1"># The port for the info server to serve on</span>
+<span class="na">KUBELET_PORT</span><span class="o">=</span><span class="s">&quot;--port=10250&quot;</span>
+
+<span class="c1"># You may leave this blank to use the actual hostname</span>
+<span class="na">KUBELET_HOSTNAME</span><span class="o">=</span><span class="s">&quot;--hostname-override=node&quot;</span>
+
+<span class="c1"># location of the api-server</span>
+<span class="na">KUBELET_API_SERVER</span><span class="o">=</span><span class="s">&quot;--api-servers=http://master:8080&quot;</span>
+
+<span class="c1"># Add your own!</span>
+<span class="na">KUBELET_ARGS</span><span class="o">=</span><span class="s">&quot;--cgroup-driver=systemd --cluster-dns=10.254.1.1 --cluster-domain=cluster.local --pod_infra_container_image=172.100.200.208/captain/pause-amd64:3.0&quot;</span>
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p>在``&#8211;pod_infra_container_image=172.100.200.208/captain/pause-amd64:3.0``可以将参数值
+设置为``pause-amd64:3.0``镜像仓库地址。</p>
+<p class="last"><tt class="docutils literal"><span class="pre">--cluster-dns=10.254.1.1</span></tt>: cluster dns 在这里可以默认不做改动，参考 <a class="reference internal" href="kubernetes-dns.html#kubernetes-dns"><em>Kubernetes DNS 搭建</em></a></p>
+</div>
+</li>
+<li><p class="first">start services</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="go">for SERVICES in kube-proxy flanneld kubelet docker; do</span>
+<span class="go">    systemctl restart $SERVICES</span>
+<span class="go">    systemctl enable $SERVICES</span>
+<span class="go">    systemctl status $SERVICES</span>
+<span class="go">done</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">configure kubectl</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="go">kubectl config set-cluster default-cluster --server=http://master:8080</span>
+<span class="go">kubectl config set-context default-context --cluster=default-cluster --user=default-admin</span>
+<span class="go">kubectl config use-context default-context</span>
+</pre></div>
+</div>
+</li>
+</ol>
+</div>
+</div>
+<div class="section" id="id3">
+<h2>验证安装<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic">
+<li><p class="first">run command below on master node</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">[root@master ~]#</span> kubectl get nodes
+<span class="go">NAME      STATUS    AGE       VERSION</span>
+<span class="go">node      Ready     5h        v1.6.7</span>
+</pre></div>
+</div>
+</li>
+</ol>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Kubernetes 集群环境搭建</a><ul>
+<li><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li><a class="reference internal" href="#id1">搭建具体步骤</a><ul>
+<li><a class="reference internal" href="#id2">所有节点</a></li>
+<li><a class="reference internal" href="#master">master节点</a></li>
+<li><a class="reference internal" href="#node">node节点</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#id3">验证安装</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">Kubernets Notes</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="kubernetes-dashboard.html"
+                        title="next chapter">Kubernetes dashboard 搭建</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/k8s/environment.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="kubernetes-dashboard.html" title="Kubernetes dashboard 搭建"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Kubernets Notes"
+             >previous</a> |</li>
+        <li><a href="../index.html">k8s 1.0 documentation</a> &raquo;</li>
+          <li><a href="index.html" >Kubernets Notes</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2017, zhengchuan.hu@easystack.cn.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    </div>
+  </body>
+</html>

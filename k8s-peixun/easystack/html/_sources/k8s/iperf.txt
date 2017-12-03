@@ -1,0 +1,99 @@
+.. _iperf:
+
+==========
+iperf Demo
+==========
+
+.. note::
+
+   1. 以下所以shell命令都是在root用户下执行
+   2. Kubernetes集群环境已搭建好，请参考 :ref:`kubernetes-cluster-environment`
+   3. Kube-dns部署在Kubernetes集群
+   4. Prometheus部署在Kubernetes集群
+.. end
+
+Prerequisites
+~~~~~~~~~~~~~
+
+
+
+Deploy
+~~~~~~
+
+#. master节点上运行iperf server:
+
+   .. code-block:: yaml
+
+      iperf3 -s
+
+   .. end
+
+
+#. 准备iperf的DockerFile文件:
+
+   .. code-block:: yaml
+
+      FROM centos
+
+      RUN yum install -y iperf3.x86_64
+
+
+   .. end
+
+
+#. 准备启动iperf deployment的iperf-deployment.yaml文件:
+
+   .. code-block:: yaml
+
+      apiVersion: apps/v1beta1
+      kind: Deployment
+      metadata:
+        name: test-iperf
+        namespace: default
+        labels:
+          k8s-app: test-iperf
+      spec:
+        selector:
+          matchLabels:
+            name: test-iperf
+        template:
+          metadata:
+            labels:
+              name: test-iperf
+          spec:
+            hostNetwork: true
+            containers:
+            - name: test-iperf
+              image: iperf:v1
+              command:
+                - /usr/bin/iperf3 -c 192.168.0.155 -i 1 -t 60000 -P 10
+              resources:
+                limits:
+                  memory: 200Mi
+                requests:
+                  cpu: 100m
+                  memory: 200Mi
+
+
+
+#. make iperf image and load to slave node, create it
+
+   .. code-block:: console
+
+      [root@master ~]# docker build ./ -t iperf:v1
+      [root@master ~]# docker save iperf:v1 >iperf.tar
+      [root@master ~]# scp iperf.tar root@slave:/opt/
+      [root@slave  ~]# docker load <iperf.tar
+      [root@master ~]# kubectl create -f ./iperf-deployment.yaml
+
+   .. end
+
+
+#. select metrics in prometheus webUI
+
+   .. code-block:: console
+     
+      podReceivedNetwork = `sum (rate (container_network_receive_bytes_total{image!="",name=~"^k8s_.*",kubernetes_io_hostname=~"^$Node$",namespace=~"^$Space$",pod_name=~"^$Pod$"}[1m])) by (kubernetes_io_hostname,namespace,pod_name)`
+      podSendNetwork     = `sum (rate (container_network_transmit_bytes_total{image!="",name=~"^k8s_.*",kubernetes_io_hostname=~"^$Node$",namespace=~"^$Space$",pod_name=~"^$Pod$"}[1m])) by (kubernetes_io_hostname,namespace,pod_name)`
+
+   .. end

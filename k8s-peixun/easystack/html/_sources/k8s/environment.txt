@@ -1,0 +1,242 @@
+.. _kubernetes-cluster-environment:
+
+=======================
+Kubernetes 集群环境搭建
+=======================
+
+.. note::
+
+   1. 以下所以shell命令都是在root用户下执行
+
+.. end
+
+Prerequisites
+~~~~~~~~~~~~~
+
++--------------------------------------+--------------------------------------+
+| OperationSystem                      | Fedora atomic 26                     |
++--------------------------------------+--------------------------------------+
+| Kubernetes                           | ``v1.6.7``                           |
++--------------------------------------+--------------------------------------+
+| docker                               | ``1.13.1``                           |
++--------------------------------------+--------------------------------------+
+
+
+搭建具体步骤
+~~~~~~~~~~~~
+
+
+所有节点
++++++++++
+
+#. 在每个节点上修改hosts配置，``vim /etc/hosts``:
+
+   .. code-block:: console
+
+      127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+      ::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+      10.20.0.100 master
+      10.20.0.101 node
+
+   .. end
+
+#. 修改高版本docker iptables规则
+
+   .. code-block:: console
+
+      iptables -P FORWARD ACCEPT
+
+   .. end
+
+#. 修改``/etc/kubernetes/config``:
+
+   .. code-block:: ini
+
+      # logging to stderr means we get it in the systemd journal
+      KUBE_LOGTOSTDERR="--logtostderr=true"
+
+      # journal message level, 0 is debug
+      KUBE_LOG_LEVEL="--v=0"
+
+      # Should this cluster be allowed to run privileged docker containers
+      KUBE_ALLOW_PRIV="--allow-privileged=false"
+
+      # How the controller-manager, scheduler, and proxy find the apiserver
+      KUBE_MASTER="--master=http://master:8080"
+
+   .. end
+
+#. 禁用SELinux，iptables和firewalld
+
+   .. code-block:: console
+
+      setenforce 0
+      systemctl disable iptables-services firewalld
+      systemctl stop iptables-services firewalld
+
+   .. end
+
+#. Configure flannel to overlay Docker network in ``/etc/sysconfig/flanneld``
+
+   .. code-block:: ini
+
+      # Flanneld configuration options
+
+      # etcd url location.  Point this to the server where etcd runs
+      FLANNEL_ETCD_ENDPOINTS="http://master:2379"
+
+      # etcd config key.  This is the configuration key that flannel queries
+      # For address range assignment
+      FLANNEL_ETCD_PREFIX="/atomic.io/network"
+
+      # Any additional options that you want to pass
+      #FLANNEL_OPTIONS=""
+
+   .. end
+
+
+master节点
++++++++++++
+
+#. 编辑``/etc/etcd/etcd.conf``文件:
+
+   .. code-block:: ini
+
+      ETCD_NAME=default
+      ETCD_DATA_DIR="/var/lib/etcd/default.etcd"
+      ETCD_LISTEN_CLIENT_URLS="http://0.0.0.0:2379"
+      ETCD_ADVERTISE_CLIENT_URLS="http://0.0.0.0:2379"
+
+   .. end
+
+
+#. 编辑``/etc/kubernetes/apiserver``文件:
+
+   .. code-block:: ini
+
+      # The address on the local server to listen to.
+      KUBE_API_ADDRESS="--address=0.0.0.0"
+
+      # The port on the local server to listen on.
+      KUBE_API_PORT="--port=8080"
+
+      # Port minions listen on
+      KUBELET_PORT="--kubelet-port=10250"
+
+      # Comma separated list of nodes in the etcd cluster
+      KUBE_ETCD_SERVERS="--etcd-servers=http://master:2379"
+
+      # Address range to use for services
+      KUBE_SERVICE_ADDRESSES="--service-cluster-ip-range=10.254.0.0/16"
+
+      # default admission control policies
+      # KUBE_ADMISSION_CONTROL="--admission-control=NamespaceLifecycle,LimitRanger,SecurityContextDeny,ServiceAccount,ResourceQuota"
+
+      # Add your own!
+      KUBE_API_ARGS=""
+
+   .. end
+
+
+#. Start ETCD and configure it to hold the network overlay configuration on master
+
+   .. warning::
+
+      This network must be unused in your network infrastructure! 172.30.0.0/16 is free in our network.
+
+   .. end
+
+   .. code-block:: console
+
+      systemctl start etcd
+      etcdctl mkdir /atomic.io/network
+      etcdctl mk /atomic.io/network/config "{ \"Network\": \"172.30.0.0/16\", \"SubnetLen\": 24, \"Backend\": { \"Type\": \"vxlan\" } }"
+
+   .. end
+
+#. start services
+
+   .. code-block:: console
+
+      for SERVICES in etcd kube-apiserver kube-controller-manager kube-scheduler flanneld; do
+          systemctl restart $SERVICES
+          systemctl enable $SERVICES
+          systemctl status $SERVICES
+      done
+
+   .. end
+
+
+node节点
+++++++++++
+
+#. 配置``/etc/kubernetes/kubelet``文件:
+
+   .. code-block:: ini
+
+      ###
+      # kubernetes kubelet (minion) config
+
+      # The address for the info server to serve on (set to 0.0.0.0 or "" for all interfaces)
+      KUBELET_ADDRESS="--address=0.0.0.0"
+
+      # The port for the info server to serve on
+      KUBELET_PORT="--port=10250"
+
+      # You may leave this blank to use the actual hostname
+      KUBELET_HOSTNAME="--hostname-override=node"
+
+      # location of the api-server
+      KUBELET_API_SERVER="--api-servers=http://master:8080"
+
+      # Add your own!
+      KUBELET_ARGS="--cgroup-driver=systemd --cluster-dns=10.254.1.1 --cluster-domain=cluster.local --pod_infra_container_image=172.100.200.208/captain/pause-amd64:3.0"
+
+   .. end
+
+   .. warning::
+
+      在``--pod_infra_container_image=172.100.200.208/captain/pause-amd64:3.0``可以将参数值
+      设置为``pause-amd64:3.0``镜像仓库地址。
+
+      ``--cluster-dns=10.254.1.1``: cluster dns 在这里可以默认不做改动，参考 :ref:`kubernetes-dns`
+
+   .. end
+
+
+#. start services
+
+   .. code-block:: console
+
+      for SERVICES in kube-proxy flanneld kubelet docker; do
+          systemctl restart $SERVICES
+          systemctl enable $SERVICES
+          systemctl status $SERVICES
+      done
+
+   .. end
+
+
+#. configure kubectl
+
+   .. code-block:: console
+
+      kubectl config set-cluster default-cluster --server=http://master:8080
+      kubectl config set-context default-context --cluster=default-cluster --user=default-admin
+      kubectl config use-context default-context
+
+   .. end
+
+
+验证安装
+~~~~~~~~~
+
+#. run command below on master node
+
+   .. code-block:: console
+
+      [root@master ~]# kubectl get nodes
+      NAME      STATUS    AGE       VERSION
+      node      Ready     5h        v1.6.7
+
+   .. end

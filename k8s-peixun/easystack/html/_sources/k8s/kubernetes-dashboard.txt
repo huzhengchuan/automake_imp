@@ -1,0 +1,123 @@
+.. _kubernetes-dashboard:
+
+==========================
+Kubernetes dashboard 搭建
+==========================
+
+.. note::
+
+   1. 以下所以shell命令都是在root用户下执行
+   2. Kubernetes集群环境已搭建好，请参考 :ref:`kubernetes-cluster-environment`
+
+.. end
+
+Prerequisites
+~~~~~~~~~~~~~
+
++-----------------------------------------------------+--------------------------------------+
+| docker镜像                                          | 版本                                 |
++-----------------------------------------------------+--------------------------------------+
+| gcr.io/google_containers/pause-amd64                | ``3.0``                              |
++-----------------------------------------------------+--------------------------------------+
+| gcr.io/google_containers/kubernetes-dashboard-amd64 | ``v1.6.3``                           |
++-----------------------------------------------------+--------------------------------------+
+
+
+Deploy
+~~~~~~
+
+#. 准备kubernetes-dashboard.yaml文件:
+
+   .. code-block:: yaml
+
+      apiVersion: extensions/v1beta1
+      kind: Deployment
+      metadata:
+        name: kubernetes-dashboard
+        namespace: kube-system
+        labels:
+          k8s-app: kubernetes-dashboard
+          kubernetes.io/cluster-service: "true"
+          addonmanager.kubernetes.io/mode: Reconcile
+      spec:
+        replicas: 1
+        selector:
+          matchLabels:
+            k8s-app: kubernetes-dashboard
+        template:
+          metadata:
+            labels:
+              k8s-app: kubernetes-dashboard
+            annotations:
+              scheduler.alpha.kubernetes.io/critical-pod: ''
+          spec:
+            containers:
+            - name: kubernetes-dashboard
+              image: gcr.io/google_containers/kubernetes-dashboard-amd64:v1.6.3
+              resources:
+                # keep request = limit to keep this container in guaranteed class
+                limits:
+                  cpu: 100m
+                  memory: 300Mi
+                requests:
+                  cpu: 100m
+                  memory: 100Mi
+              args:
+              - --apiserver-host=http://10.20.0.100:8080
+              ports:
+              - containerPort: 9090
+              livenessProbe:
+                httpGet:
+                  path: /
+                  port: 9090
+                initialDelaySeconds: 30
+                timeoutSeconds: 30
+      ---
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: kubernetes-dashboard
+        namespace: kube-system
+        labels:
+          k8s-app: kubernetes-dashboard
+      spec:
+        type: NodePort
+        selector:
+          k8s-app: kubernetes-dashboard
+        ports:
+        - port: 80
+          targetPort: 9090
+          nodePort: 30000
+
+   .. end
+
+
+#. create pod from kubernetes-dashboard.yaml
+
+   .. code-block:: console
+
+      [root@master ~]# kubectl create -f kube-dashboard.yaml
+
+   .. end
+
+
+Verify
+~~~~~~
+
+#. check pod's status is ready
+
+   .. code-block:: console
+
+      [root@master ~]# kubectl get pods --namespace=kube-system
+      NAME                                    READY     STATUS    RESTARTS   AGE
+      kubernetes-dashboard-2951595245-rwzrm   1/1       Running   0          20s
+
+   .. end
+
+#. visit `http://master:8080/ui <http://master:8080/ui>`__:
+
+   .. image:: imgs/kube-dashboard.jpeg
+      :align: center
+      :width: 100%
+      :alt: kubernetes dashboard ui
+

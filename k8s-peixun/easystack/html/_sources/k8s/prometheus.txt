@@ -1,0 +1,363 @@
+.. _kubernetes-dns:
+
+==========================
+Kubernetes Prometheus 搭建
+==========================
+
+
+.. note::
+
+   1. 以下所以shell命令都是在root用户下执行
+   2. Kubernetes集群环境已搭建好，请参考 :ref:`kubernetes-cluster-environment`
+
+.. end
+
+Prerequisites
+~~~~~~~~~~~~~
+
++-------------------------------------------------------+-----------------------+
+| docker镜像                                            | version               |
++-------------------------------------------------------+-----------------------+
+| gcr.io/google_containers/prom/node-exporter           | ``v1.8``              |
++-------------------------------------------------------+-----------------------+
+| gcr.io/google_containers/prom/prometheus              | ``v1``                |
++-------------------------------------------------------+-----------------------+
+
+
+
+Deploy
+~~~~~~
+
+#. 准备prometheus-config.yaml:
+
+   .. code-block:: yaml
+      :linenos:
+      :emphasize-lines: 82
+
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: prometheus-config
+        namespace: kube-system
+      data:
+        prometheus.yml: |
+          global:
+            scrape_interval: 30s
+            scrape_timeout: 30s
+          scrape_configs:
+          - job_name: 'prometheus'
+            static_configs:
+              - targets: ['localhost:9090']
+          - job_name: 'kubernetes-apiservers'
+            scheme: https
+            tls_config:
+              ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+            kubernetes_sd_configs:
+            - role: endpoints
+            relabel_configs:
+            - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+              action: keep
+              regex: default;kubernetes;https
+          - job_name: 'kubernetes-nodes'
+            scheme: https
+            tls_config:
+              ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              insecure_skip_verify: true
+            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+            kubernetes_sd_configs:
+            - role: node
+            relabel_configs:
+            - action: labelmap
+              regex: __meta_kubernetes_node_label_(.+)
+            - target_label: __address__
+              replacement: kubernetes.default.svc.cluster.local:443
+            - target_label: __scheme__
+              replacement: https
+            - source_labels: [__meta_kubernetes_node_name]
+              regex: (.+)
+              target_label: __metrics_path__
+              replacement: /api/v1/nodes/${1}/proxy/metrics
+          - job_name: 'kubernetes-cadvisor'
+            scheme: https
+            tls_config:
+              ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              insecure_skip_verify: true
+            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+            kubernetes_sd_configs:
+            - role: node
+            relabel_configs:
+            - action: labelmap
+              regex: __meta_kubernetes_node_label_(.+)
+            - target_label: __address__
+              replacement: kubernetes.default.svc:443
+            - source_labels: [__meta_kubernetes_node_name]
+              regex: (.+)
+              target_label: __metrics_path__
+              replacement: /api/v1/nodes/${1}/proxy/metrics/cadvisor
+          - job_name: 'kubernetes-service-endpoints'
+            kubernetes_sd_configs:
+            - role: endpoints
+            relabel_configs:
+            - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+              action: keep
+              regex: true
+            - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scheme]
+              action: replace
+              target_label: __scheme__
+              regex: (https?)
+            - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
+              action: replace
+              target_label: __metrics_path__
+              regex: (.+)
+            - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
+              action: replace
+              target_label: __address__
+              regex: (.+)(?::\d+);(\d+)
+              replacement: $1:$2
+            - action: labelmap
+              regex: __meta_kubernetes_service_label_(.+)
+            - source_labels: [__meta_kubernetes_service_namespace]
+              action: replace
+              target_label: kubernetes_namespace
+            - source_labels: [__meta_kubernetes_service_name]
+              action: replace
+              target_label: kubernetes_name
+          - job_name: 'kubernetes-services'
+            metrics_path: /probe
+            params:
+              module: [http_2xx]
+            kubernetes_sd_configs:
+            - role: service
+            relabel_configs:
+            - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_probe]
+              action: keep
+              regex: true
+            - source_labels: [__address__]
+              target_label: __param_target
+            - target_label: __address__
+              replacement: blackbox
+            - source_labels: [__param_target]
+              target_label: instance
+            - action: labelmap
+              regex: __meta_kubernetes_service_label_(.+)
+            - source_labels: [__meta_kubernetes_service_namespace]
+              target_label: kubernetes_namespace
+            - source_labels: [__meta_kubernetes_service_name]
+              target_label: kubernetes_name
+          - job_name: 'kubernetes-pods'
+            kubernetes_sd_configs:
+            - role: pod
+            relabel_configs:
+            - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+              action: keep
+              regex: true
+            - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+              action: replace
+              target_label: __metrics_path__
+              regex: (.+)
+            - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+              action: replace
+              regex: (.+):(?:\d+);(\d+)
+              replacement: ${1}:${2}
+              target_label: __address__
+            - action: labelmap
+              regex: __meta_kubernetes_pod_label_(.+)
+            - source_labels: [__meta_kubernetes_pod_namespace]
+              action: replace
+              target_label: kubernetes_namespace
+            - source_labels: [__meta_kubernetes_pod_name]
+              action: replace
+              target_label: kubernetes_pod_name
+
+
+   .. end
+
+
+
+
+#. 准备prometheus-deployment.yaml
+
+   .. code-block:: yaml
+      :linenos:
+      :emphasize-lines: 30
+
+
+      apiVersion: extensions/v1beta1
+      kind: Deployment
+      metadata:
+        labels:
+          app: prometheus-deployment
+        name: prometheus
+        namespace: kube-system
+      spec:
+        replicas: 1
+        template:
+          metadata:
+            labels:
+              app: prometheus
+          spec:
+            containers:
+            - image: prometheus:v1.6.3
+              imagePullPolicy: IfNotPresent
+              name: prometheus
+              command:
+              - "/bin/prometheus"
+              args:
+              - "-config.file=/etc/prometheus/prometheus.yml"
+              - "-storage.local.path=/prometheus"
+              - "-storage.local.retention=24h"
+              ports:
+              - containerPort: 9090
+                protocol: TCP
+              volumeMounts:
+              - mountPath: "/prometheus"
+                name: data
+              - mountPath: "/etc/prometheus"
+                name: config-volume
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 100Mi
+                limits:
+                  cpu: 500m
+                  memory: 2500Mi
+            volumes:
+            - emptyDir: {}
+              name: data
+            - configMap:
+                name: prometheus-config
+              name: config-volume
+
+   .. end
+
+
+#. 准备prometheus-service.yaml
+
+   .. code-block:: yaml
+      :linenos:
+      :emphasize-lines: 30
+
+
+      kind: Service
+      apiVersion: v1
+      metadata:
+        labels:
+          app: prometheus
+        name: prometheus
+        namespace: kube-system
+      spec:
+        ports:
+          - port: 9090
+            targetPort: 9090
+            nodePort: 30017
+        selector:
+          app: prometheus
+        type: NodePort
+
+   .. end
+
+
+#. create pod from prometheus-config.yaml prometheus-deployment.yaml prometheus-service.yaml
+
+   .. code-block:: console
+
+      [root@master ~]# kubectl create -f prometheus-config.yaml
+      [root@master ~]# kubectl create -f prometheus-deployment.yaml
+      [root@master ~]# kubectl create -f prometheus-service.yaml
+
+   .. end
+
+
+
+#. 准备node-export.yaml
+
+   .. code-block:: yaml
+      :linenos:
+      :emphasize-lines: 30
+
+
+      apiVersion: extensions/v1beta1
+      kind: DaemonSet
+      metadata:
+        name: node-exporter
+        namespace: kube-system
+      spec:
+        template:
+          metadata:
+            labels:
+              app: node-exporter
+            name: node-exporter
+          spec:
+            containers:
+            - image: node-exporter:v0.14.0
+              name: node-exporter
+              ports:
+              - containerPort: 9100
+                hostPort: 9100
+                name: scrape
+              volumeMounts:
+              - name: data-disk
+                mountPath: /data-disk
+                readOnly: true
+              - name: root-disk
+                mountPath: /root-disk
+                readOnly: true
+            volumes:
+              - name: data-disk
+                hostPath:
+                  path: /localdata
+              - name: root-disk
+                hostPath:
+                  path: /
+            hostNetwork: true
+            hostPID: true
+            tolerations:
+            - effect: NoSchedule
+              key: node-role.kubernetes.io/master
+            - effect: NoSchedule
+              key: node.cloudprovider.kubernetes.io/uninitialized
+              value: "true"
+
+   .. end
+
+
+#. 准备node-export-svc.yaml
+
+   .. code-block:: yaml
+      :linenos:
+      :emphasize-lines: 30
+
+
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: node-exporter
+        namespace: kube-system
+        annotations:
+          prometheus.io/scrape: 'true'
+        labels:
+          k8s-app: node-exporter
+          kubernetes.io/cluster-service: "true"
+          addonmanager.kubernetes.io/mode: Reconcile
+      spec:
+        clusterIP: None
+        ports:
+        - name: scrape
+          port: 9100
+          protocol: TCP
+        selector:
+          app: node-exporter
+        type: ClusterIP
+
+   .. end
+
+
+
+#. create pod from node-export.yaml
+
+   .. code-block:: console
+
+      [root@master ~]# kubectl create -f node-export.yaml
+
+   .. end
